@@ -17,29 +17,33 @@ static AVStream* gmf_get_stream(AVFormatContext *ctx, int idx) {
 	return ctx->streams[idx];
 }
 
-static int gmf_alloc_priv_data(AVFormatContext *s, AVDictionary **options) {
-	AVDictionary *tmp = NULL;
-
-    if (options)
-        av_dict_copy(&tmp, *options, 0);
-
-	if (s->iformat->priv_data_size > 0) {
-		if (!(s->priv_data = av_mallocz(s->iformat->priv_data_size))) {
-			return -1;
-		 }
-
-		 if (s->iformat->priv_class) {
-			*(const AVClass**)s->priv_data = s->iformat->priv_class;
-			av_opt_set_defaults(s->priv_data);
-			if (av_opt_set_dict(s->priv_data, &tmp) < 0)
-				return -1;
-		}
-
-		return (s->iformat->priv_data_size);
-	}
-
-	return 0;
+// ---------------------------------------------------------------------------
+// priv_data_size was dropped from AV*Format in FFmpeg 5.1.
+// Use a compile-time check so the code builds with any version.
+// ---------------------------------------------------------------------------
+static int gmf_alloc_priv_data(AVFormatContext *s)
+{
+#if LIBAVFORMAT_VERSION_MAJOR < 59  // FFmpeg 5.0 == libavformat 58.x
+    if (s->iformat && s->iformat->priv_data_size > 0) {
+        if (!(s->priv_data = av_mallocz(s->iformat->priv_data_size))) {
+            return AVERROR(ENOMEM);
+        }
+        return 0;
+    }
+    if (s->oformat && s->oformat->priv_data_size > 0) {
+        if (!(s->priv_data = av_mallocz(s->oformat->priv_data_size))) {
+            return AVERROR(ENOMEM);
+        }
+        return 0;
+    }
+    return 0;
+#else
+    // FFmpeg ≥ 5.1: field no longer exists – nothing to allocate.
+    (void)s;   // silence unused-param warning
+    return 0;
+#endif
 }
+
 
 static char *gmf_sprintf_sdp(AVFormatContext *ctx) {
 	char *sdp = malloc(sizeof(char)*16384);
