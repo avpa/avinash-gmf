@@ -18,6 +18,11 @@ package gmf
 
 #define HAVE_THREADS 1
 
+static int64_t gmf_av_get_default_channel_layout(int nb_channels) 
+{
+    return av_get_default_channel_layout(nb_channels);
+}
+
 static int32_t gmf_select_sample_fmt(AVCodec *codec)
 {
     if (codec && codec->sample_fmts) {
@@ -74,10 +79,10 @@ static int select_channel_layout(AVCodec *codec) {
     uint64_t best_ch_layout = 0;
     int best_nb_channels    = 0;
 
-    if (!codec->channel_layouts)
+    if (!codec->ch_layouts)
         return AV_CH_LAYOUT_STEREO;
 
-    p = codec->channel_layouts;
+    p = codec->ch_layouts;
     while (*p) {
         int nb_channels = av_get_channel_layout_nb_channels(*p);
 
@@ -554,7 +559,7 @@ func (cc *CodecCtx) GetChannelLayoutName() string {
 }
 
 func (cc *CodecCtx) GetDefaultChannelLayout(ac int) int {
-	return int(C.av_get_default_channel_layout(C.int(ac)))
+	return int(C.gmf_av_get_default_channel_layout(C.int(ac)))
 }
 
 func (cc *CodecCtx) GetBitsPerSample() int {
